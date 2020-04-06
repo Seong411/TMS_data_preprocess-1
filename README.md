@@ -1,24 +1,25 @@
 TMS_data_preprocess
 
-#라벨링은 각자 자기가 알아서 할 것
-[Label Format]
-분노: A
-공포: F
-슬픔: S
-스트레스 아님: X
+#[Label Format]
+- 분노: A
+- 공포: F
+- 슬픔: S
+- 스트레스 아님: X
 
-#최종 csv파일 column 순서
-Label, EDA, HR, IRI, II, T, ....
+#The final order of csv files
+- Label, EDA, HR, IBI, RR, TEMP, ....
 
-#PL은 PYTHON으로
-
-#제작할 program
+#Program to create
 - 라벨링
 - 데이터 csv파일 read, write
 - ?
 
-#csv파일 handleing program
-1. Hz 맞추기 (일단 64로)
+#csv file handling program design
+1. Hz 맞추기 (일단 64로...?)
+ - EDA: 4Hz
+ - HR: 1Hz
+ - IBI: Hz 단위가 아님. Time Stamp = 첫 column + initial time(처음 시작 시간)
+ - TEMP: 4Hz
 
 2. 파일 합치기
 
