@@ -1,0 +1,24 @@
+Subject Information
+~~~~~~~~~~~~~~~~~~~
+Team: No Team Allocated
+Name: UNKNOWN
+Gender: UNKNOWN
+Birth Year: UNKNOWN
+ROG Act Min/Max : UNKNOWN
+ROG Resp Min/Max : UNKNOWN
+ROG HR Min/Max : UNKNOWN
+ROG O2R sec / sec : UNKNOWN
+
+Device Information
+~~~~~~~~~~~~~~~~~~
+Serial number: BHT052745
+MAC address: UNKNOWN
+Device Friendly Name: UNKNOWN
+
+Session Information
+~~~~~~~~~~~~~~~~~~~
+Log Format: 0014
+Log Date: 2020년 5월 3일 일요일
+Log Time: 오후 8:14:43
+Log Duration: 01:54:48
+Page Period(ms): 1000
