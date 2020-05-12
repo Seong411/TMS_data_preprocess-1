@@ -36,6 +36,33 @@ def get_UTC_time_from_zephyr(cur_time):
 def get_start_idx(UTC_time, latest_time, HZ):
 	return int((UTC_time - latest_time) * HZ)
 
+def get_start_RR_idx(start_time):
+	start_idx = 1
+	sum_column = 0
+	while True:
+		start_idx = start_idx + 1
+		sum_column = sum_column + RR[start_idx]
+		if(start_time < sum_column)	break
+	return start_idx
+
+def get_end_RR_idx(start_idx, time_window):
+	end_idx = start_idx - 1
+	sum_column = 0
+	while True:
+		start_idx = start_idx + 1
+		sum_column = sum_column + RR[start_idx]
+		if(time_window < sum_column) break
+	return end_idx
+
+def get_HRV(start_idx, end_idx):
+	cnt = end_idx - start_idx
+	sum_diff_square = 0
+	for idx in range(start_idx, end_idx + 1):
+		sum_diff_square = sum_diff_square + (rr_df[column_name[RtoR]][idx+1]-rr_df[column_name[RtoR]][idx])*(rr_df[column_name[RtoR]][idx+1]-rr_df[column_name[RtoR]][idx])
+	return math.sqrt(sum_diff_square/cnt)
+
+
+
 def check_noise(STFW, latest_time):
 	#TODO
 	################################### finding noise ####################################
@@ -90,6 +117,13 @@ def set_data(start_time, end_time, time_window, emotion):
 		ecg_avg.append(ecg_df[column_name['ecg']][idx:idx + hz['ecg']*time_window].sum() / (time_window * hz['ecg']))
 		ecg_med.append(statistics.median(ecg_df[column_name['ecg']][idx:idx + hz['ecg']*time_window]))
 		ecg_std.append(numpy.std(ecg_df[column_name['ecg']][idx:idx + hz['ecg']*time_window]))
+
+		# hrv
+		start_idx = get_start_RR_idx(start_time)
+		end_idx = get_end_RR_idx(start_idx, time_window)
+		hrv.append(get_HRV(start_idx, end_idx))
+		
+		
 		
 ##################################### get inputs #####################################
 # folder name
@@ -124,6 +158,7 @@ eda = pandas.read_csv(os.path.join(this_dir, dir_name, 'EDA.csv'))
 ibi = pandas.read_csv(os.path.join(this_dir, dir_name, 'IBI.csv'))
 breathing = pandas.read_csv(os.path.join(this_dir, dir_name, 'BREATHING.csv'))
 ecg = pandas.read_csv(os.path.join(this_dir, dir_name, 'ECG.csv'))
+rr = pandas.read_csv(os.path.join(this_dir, dir_name,'RR.csv'))	# zephyr랑 empatica data_directory sync 문제
 
 all_dataFrame = []
 labeling = [] # NOTHING: N / SAD: S / ANGER: A / FEAR: F
@@ -147,6 +182,7 @@ ecg_min = []
 ecg_avg = []
 ecg_med = []
 ecg_std = []
+hrv = []
 
 # read data as dataFrame
 #hr_df = pandas.DataFrame(hr)
@@ -157,6 +193,7 @@ eda_df = eda
 ibi_df = ibi
 breathing_df = breathing
 ecg_df = ecg
+rr_df = rr
 
 # get the column name
 column_name = {}
