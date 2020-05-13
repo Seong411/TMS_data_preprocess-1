@@ -143,6 +143,7 @@ def check_noise(STFW, latest_time):
 # set data from each file from start_time to end_time
 # if (start_time - end_time) % time_window != 0: just ignore the tail
 def set_data(start_time, end_time, zephyr_time, time_window, emotion):
+	global count_total
 	for STFW in range(start_time, end_time, time_window): # STFW: stㅠㅜㅏart time for window
 		if STFW + time_window > end_time: # time-window size is not enough
 			break
@@ -221,7 +222,8 @@ noise_mode = input("\n ===================================================== \n"
 ###################################### setting #######################################
 # open csv files
 this_dir = os.path.dirname(os.path.abspath( __file__ ))
-output_file = os.path.join(os.path.dirname(os.path.abspath( __file__ )), '123', 'input.csv')
+this_dir = this_dir[:-4] + 'Data'
+output_file = os.path.join(os.path.dirname(os.path.abspath( __file__ )), dir_name + '_output.csv')
 label = pandas.read_csv(os.path.join(this_dir, dir_name, 'LABEL.csv'))
 hr = pandas.read_csv(os.path.join(this_dir, dir_name, 'HR.csv'))
 eda = pandas.read_csv(os.path.join(this_dir, dir_name, 'EDA.csv'))

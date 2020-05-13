@@ -33,7 +33,8 @@ def file_naming(path):
 
 def Change_All_Datafiles_Name():
     dir = os.path.dirname(os.path.abspath(__file__))
-    file_list = glob.glob(dir+'\\Data\\*')
+    dir = dir[:-4] + 'Data'
+    file_list = glob.glob(dir+'\\*')
     for i in file_list:
         if i.count('.') > 0:
             continue
