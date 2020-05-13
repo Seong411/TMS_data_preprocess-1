@@ -17,8 +17,11 @@ import datetime
 import math
 import statistics
 import numpy
+from naming import Change_All_Datafiles_Name as Change
 
 ADDED_TIME = 0 # added to label.end_time
+count = {}
+count_total = 0
 
 # cur_time ex) 0728121132 (no year) 한국시간 기준으로 넣으면 됨
 def get_UTC_time(cur_time):
@@ -68,17 +71,74 @@ def get_HRV(start_idx, end_idx):
 	return math.sqrt(sum_diff_square/cnt)
 
 
-
 def check_noise(STFW, latest_time):
-	#TODO
-	################################### finding noise ####################################
-	######################################################################################
+    #TODO:
+    # 일단은 그냥 0값 있으면 time window 패스하는걸로 했는데, 있으면 그 record만 지우는 방식을 쓸 수도 있고, 그 time window의 평균 값을 집어넣어주는 방법도 있음
+    ################################### finding noise ####################################
+    ######################################################################################
+    idx = get_start_idx(STFW, latest_time, hz['hr'])
+    if hr_df[column_name['hr']][idx:idx + hz['hr'] * time_window].min() == 0:
+        if noise_mode == 1 and 'hr' in count:
+            count['hr'] += 1
+            return True
+        elif noise_mode == 1:
+            count['hr'] = 1
+            return True
+        else:
+            mean = hr_df[column_name['hr']][idx:idx + hz['hr'] * time_window].sum() / (time_window * hz['hr'])
+            for i in range(idx, idx + hz['hr'] * time_window):
+                if hr_df[column_name['hr']][i] == 0:
+                    hr_df[column_name['hr']][i] = mean
 
-	################################## address noise #####################################
-	# 1. mediate the noise data
-	# 2. just delete
-	######################################################################################
-	return False
+    idx = get_start_idx(STFW, latest_time, hz['eda'])
+    if eda_df[column_name['eda']][idx:idx + hz['eda'] * time_window].min() == 0:
+        if noise_mode == 1 and 'eda' in count:
+            count['eda'] += 1
+            return True
+        elif noise_mode == 1:
+            count['eda'] = 1
+            return True
+        else:
+            mean = hr_df[column_name['eda']][idx:idx + hz['eda'] * time_window].sum() / (time_window * hz['eda'])
+            for i in range(idx, idx + hz['eda'] * time_window):
+                if hr_df[column_name['eda']][i] == 0:
+                    hr_df[column_name['eda']][i] = mean
+
+    idx = get_start_idx(STFW, latest_time, hz['breathing'])
+    if breathing_df[column_name['breathing']][idx:idx + hz['breathing'] * time_window].min() == 0:
+        if noise_mode == 1 and 'breathing' in count:
+            count['breathing'] += 1
+            return True
+        elif noise_mode == 1:
+            count['breathing'] = 1
+            return True
+        else:
+            mean = hr_df[column_name['breathing']][idx:idx + hz['breathing'] * time_window].sum() / (time_window * hz['breathing'])
+            for i in range(idx, idx + hz['breathing'] * time_window):
+                if hr_df[column_name['breathing']][i] == 0:
+                    hr_df[column_name['breathing']][i] = mean
+
+
+    idx = get_start_idx(STFW, latest_time, hz['ecg'])
+    if ecg_df[column_name['ecg']][idx:idx + hz['ecg'] * time_window].min() == 0:
+        if noise_mode == 1 and 'ecg' in count:
+            count['ecg'] += 1
+            return True
+        elif noise_mode == 1:
+            count['ecg'] = 1
+            return True
+        else:
+            mean = hr_df[column_name['ecg']][idx:idx + hz['ecg'] * time_window].sum() / (time_window * hz['ecg'])
+            for i in range(idx, idx + hz['ecg'] * time_window):
+                if hr_df[column_name['ecg']][i] == 0:
+                    hr_df[column_name['ecg']][i] = mean
+
+    ################################## address noise #####################################
+    # 1. mediate the noise data
+    # 2. just delete
+    ######################################################################################
+    return False
+
 
 # set data from each file from start_time to end_time
 # if (start_time - end_time) % time_window != 0: just ignore the tail
@@ -86,11 +146,13 @@ def set_data(start_time, end_time, zephyr_time, time_window, emotion):
 	for STFW in range(start_time, end_time, time_window): # STFW: stㅠㅜㅏart time for window
 		if STFW + time_window > end_time: # time-window size is not enough
 			break
-		
-		labeling.append(emotion)
-		
+
+		count_total += 1
+
 		if check_noise(STFW, latest_time): # TODO
 			continue
+
+		labeling.append(emotion)
 
 		# hr
 		idx = get_start_idx(STFW, latest_time, hz['hr'])
@@ -129,8 +191,9 @@ def set_data(start_time, end_time, zephyr_time, time_window, emotion):
 		start_idx = get_start_RR_idx(STFW, zephyr_time, rr_cnt)
 		end_idx = get_end_RR_idx(STFW, time_window, start_idx, zephyr_time, rr_cnt)
 		hrv.append(get_HRV(start_idx, end_idx))
-		
-		
+
+
+Change()
 		
 ##################################### get inputs #####################################
 # folder name
@@ -318,4 +381,5 @@ all_dataFrame.append(pandas.DataFrame(data=data))
 All_data = pandas.concat(all_dataFrame, axis=0, ignore_index=True) # merge dataframe
 All_data.to_csv(output_file, index=False)
 
-
+print('Total number of records: ', count_total)
+print('The number of zero time-windows of each feature', count)
