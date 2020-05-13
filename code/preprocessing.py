@@ -29,36 +29,42 @@ def get_UTC_time(cur_time):
 
 # cur_time ex) 03/05/2020 19:24:58.435 (zephyr form -> empatica form)
 def get_UTC_time_from_zephyr(cur_time):
-	time_obj = datetime.datetime.strptime(cur_time.split('.')[0], '%m/%d/%Y %H:%M:%S')
+	time_obj = datetime.datetime.strptime(cur_time.split('.')[0], '%d/%m/%Y %H:%M:%S')
 	UTC_time = time.mktime(time_obj.timetuple())
 	return UTC_time
 
 def get_start_idx(UTC_time, latest_time, HZ):
 	return int((UTC_time - latest_time) * HZ)
 
-def get_start_RR_idx(start_time):
-	start_idx = 1
-	sum_column = 0
+def get_start_RR_idx(start_time, zephyr_time, cnt):
+	start_idx = -1
+	sum_column = zephyr_time
 	while True:
 		start_idx = start_idx + 1
-		sum_column = sum_column + RR[start_idx]
-		if(start_time < sum_column)	break
+		if start_idx>=cnt:
+			break
+		sum_column = sum_column + int(rr_df[column_name['RtoR']][start_idx])/1000
+		if start_time < sum_column:
+			break
 	return start_idx
 
-def get_end_RR_idx(start_idx, time_window):
-	end_idx = start_idx - 1
+def get_end_RR_idx(start_time, time_window, start_idx, zephyr_time, cnt):
+	end_idx = start_idx
 	sum_column = 0
 	while True:
-		start_idx = start_idx + 1
-		sum_column = sum_column + RR[start_idx]
-		if(time_window < sum_column) break
+		end_idx = end_idx + 1
+		if end_idx>=cnt:
+			break
+		sum_column = sum_column + int(rr_df[column_name['RtoR']][end_idx])/1000
+		if time_window < sum_column:
+			break
 	return end_idx
 
 def get_HRV(start_idx, end_idx):
 	cnt = end_idx - start_idx
 	sum_diff_square = 0
 	for idx in range(start_idx, end_idx + 1):
-		sum_diff_square = sum_diff_square + (rr_df[column_name[RtoR]][idx+1]-rr_df[column_name[RtoR]][idx])*(rr_df[column_name[RtoR]][idx+1]-rr_df[column_name[RtoR]][idx])
+		sum_diff_square = sum_diff_square + (int(rr_df[column_name['RtoR']][idx+1])-int(rr_df[column_name['RtoR']][idx]))*(int(rr_df[column_name['RtoR']][idx+1])-int(rr_df[column_name['RtoR']][idx]))/1000000
 	return math.sqrt(sum_diff_square/cnt)
 
 
@@ -76,8 +82,8 @@ def check_noise(STFW, latest_time):
 
 # set data from each file from start_time to end_time
 # if (start_time - end_time) % time_window != 0: just ignore the tail
-def set_data(start_time, end_time, time_window, emotion):
-	for STFW in range(start_time, end_time, time_window): # STFW: start time for window
+def set_data(start_time, end_time, zephyr_time, time_window, emotion):
+	for STFW in range(start_time, end_time, time_window): # STFW: stㅠㅜㅏart time for window
 		if STFW + time_window > end_time: # time-window size is not enough
 			break
 		
@@ -119,8 +125,9 @@ def set_data(start_time, end_time, time_window, emotion):
 		ecg_std.append(numpy.std(ecg_df[column_name['ecg']][idx:idx + hz['ecg']*time_window]))
 
 		# hrv
-		start_idx = get_start_RR_idx(start_time)
-		end_idx = get_end_RR_idx(start_idx, time_window)
+		rr_cnt = int(rr_df['RtoR'].count())
+		start_idx = get_start_RR_idx(STFW, zephyr_time, rr_cnt)
+		end_idx = get_end_RR_idx(STFW, time_window, start_idx, zephyr_time, rr_cnt)
 		hrv.append(get_HRV(start_idx, end_idx))
 		
 		
@@ -202,6 +209,7 @@ column_name['eda'] = list(eda_df)[0]
 column_name['ibi'] = list(ibi_df)[0]
 column_name['breathing'] = list(breathing_df)[1]
 column_name['ecg'] = list(ecg_df)[1]
+column_name['RtoR'] = list(rr_df)[1]
 
 ########################### Adjusting the START & END time ###########################
 
@@ -223,6 +231,7 @@ hz['ecg'] = 250
 
 # get the latest start time in sec
 latest_time = max(start_time['hr'], start_time['eda'], start_time['ibi'], start_time['breathing'], start_time['ecg'])
+zephyr_time = max(start_time['breathing'], start_time['ecg'])
 
 ######################## drop the data before latest time ############################
 
@@ -267,34 +276,34 @@ for i in range(-1, len(label)):
 	elif get_UTC_time(str(label['start'][max(i, 0)])) > get_UTC_time(str(label['end'][max(i, 0)])):
 		print("Your LABEL.csv row[", i, "] is invalid. (start time is later than end time)")
 		exit(0)
-		
+	zephyr_time = int(zephyr_time)
 	# time interval before the first cell in LABEL.csv
 	if i == -1:
 		start_time = int(latest_time)
 		end_time = get_UTC_time(str(label['start'][0])) - pad_time
 		emotion = 'N'
-		set_data(start_time, end_time, time_window, emotion)
+		set_data(start_time, end_time, zephyr_time, time_window, emotion)
 		continue
 	
 	# time interval for one cell in LABEL.csv
 	start_time = get_UTC_time(str(label['start'][i]))
 	end_time = get_UTC_time(str(label['end'][i])) + 1 + ADDED_TIME
 	emotion = label['label'][i]
-	set_data(start_time, end_time, time_window, emotion)
+	set_data(start_time, end_time, zephyr_time, time_window, emotion)
 	
 	# time interval between cells in LABEL.csv
 	if i < len(label) - 1:
 		start_time = get_UTC_time(str(label['end'][i])) + 1 + pad_time
 		end_time = get_UTC_time(str(label['start'][i + 1])) - pad_time
 		emotion = 'N'
-		set_data(start_time, end_time, time_window, emotion)
+		set_data(start_time, end_time, zephyr_time, time_window, emotion)
 	
 	# time interval after the last cell in LABEL.csv
 	elif i == len(label) - 1:
 		start_time = get_UTC_time(str(label['end'][i])) + 1 + pad_time
 		end_time = fastest_end_time
 		emotion = 'N'
-		set_data(start_time, end_time, time_window, emotion)
+		set_data(start_time, end_time, zephyr_time, time_window, emotion)
 
 ######################### Merge all the data into one file ###########################
 
@@ -302,7 +311,7 @@ data = {'labeling': labeling,
 		'hr_max': hr_max, 'hr_min': hr_min, 'hr_avg': hr_avg, 'hr_med': hr_med, 'hr_std': hr_std,
 		'eda_max': eda_max, 'eda_min': eda_min, 'eda_avg': eda_avg, 'eda_med': eda_med, 'eda_std': eda_std,
 		'breathing_max': breathing_max, 'breathing_min': breathing_min, 'breathing_avg': breathing_avg, 'breathing_med': breathing_med, 'breathing_std': breathing_std,
-		'ecg_max': ecg_max, 'ecg_min': ecg_min, 'ecg_avg': ecg_avg, 'ecg_med': ecg_med, 'ecg_std': ecg_std}
+		'ecg_max': ecg_max, 'ecg_min': ecg_min, 'ecg_avg': ecg_avg, 'ecg_med': ecg_med, 'ecg_std': ecg_std, 'hrv':hrv}
 
 all_dataFrame.append(pandas.DataFrame(data=data))
 
