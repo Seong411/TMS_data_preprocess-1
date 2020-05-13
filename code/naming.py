@@ -8,6 +8,7 @@ zephyr의 데이터 파일의 이름을 Empatica의 데이터 파일 이름 양�
 import os
 import glob
 
+
 def File_C(path, filenames):
     for i in filenames:
         i = i[len(path):]
@@ -24,9 +25,11 @@ def File_C(path, filenames):
         os.rename(r'%s' % (path + i), r'%s' % (path + new))
     return
 
+
 def file_naming(path):
     file_list = glob.glob(path+'\\*')
     File_C(path+'\\', file_list)
+
 
 def Change_All_Datafiles_Name():
     dir = os.path.dirname(os.path.abspath(__file__))
