@@ -144,7 +144,7 @@ def check_noise(STFW, latest_time):
 # if (start_time - end_time) % time_window != 0: just ignore the tail
 def set_data(start_time, end_time, zephyr_time, time_window, emotion):
 	global count_total
-	for STFW in range(start_time, end_time, time_window): # STFW: stㅠㅜㅏart time for window
+	for STFW in range(start_time, end_time, time_window): # STFW: start time for window
 		if STFW + time_window > end_time: # time-window size is not enough
 			break
 
@@ -193,6 +193,9 @@ def set_data(start_time, end_time, zephyr_time, time_window, emotion):
 		end_idx = get_end_RR_idx(STFW, time_window, start_idx, zephyr_time, rr_cnt)
 		hrv.append(get_HRV(start_idx, end_idx))
 
+		# sbp
+		idx = get_start_idx(STFW, latest_time, hz['bvp'])
+		sbp.append(bvp_df[column_name['bvp']][idx:idx + hz['bvp']*time_window].max())
 
 Change()
 		
@@ -231,6 +234,7 @@ ibi = pandas.read_csv(os.path.join(this_dir, dir_name, 'IBI.csv'))
 breathing = pandas.read_csv(os.path.join(this_dir, dir_name, 'BREATHING.csv'))
 ecg = pandas.read_csv(os.path.join(this_dir, dir_name, 'ECG.csv'))
 rr = pandas.read_csv(os.path.join(this_dir, dir_name,'RR.csv'))	# zephyr랑 empatica data_directory sync 문제
+bvp = pandas.read_csv(os.path.join(this_dir, dir_name, 'BVP.csv'))
 
 all_dataFrame = []
 labeling = [] # NOTHING: N / SAD: S / ANGER: A / FEAR: F
@@ -255,6 +259,7 @@ ecg_avg = []
 ecg_med = []
 ecg_std = []
 hrv = []
+sbp = []
 
 # read data as dataFrame
 #hr_df = pandas.DataFrame(hr)
@@ -266,6 +271,7 @@ ibi_df = ibi
 breathing_df = breathing
 ecg_df = ecg
 rr_df = rr
+bvp_df = bvp
 
 # get the column name
 column_name = {}
@@ -275,6 +281,7 @@ column_name['ibi'] = list(ibi_df)[0]
 column_name['breathing'] = list(breathing_df)[1]
 column_name['ecg'] = list(ecg_df)[1]
 column_name['RtoR'] = list(rr_df)[1]
+column_name['BVP'] = list(bvp_df)[1]
 
 ########################### Adjusting the START & END time ###########################
 
@@ -285,6 +292,7 @@ start_time['eda'] = float(list(eda_df)[0])
 start_time['ibi'] = float(list(ibi_df)[0])
 start_time['breathing'] = float(get_UTC_time_from_zephyr(breathing_df['Time'][0]))
 start_time['ecg'] = float(get_UTC_time_from_zephyr(ecg_df['Time'][0]))
+start_time['bvp'] = float(list(bvp_df)[0])
 
 # get HZ
 hz = {}
@@ -293,9 +301,10 @@ hz['eda'] = 4
 hz['ibi'] = 1
 hz['breathing'] = 25
 hz['ecg'] = 250
+hz['bvp'] = 64
 
 # get the latest start time in sec
-latest_time = max(start_time['hr'], start_time['eda'], start_time['ibi'], start_time['breathing'], start_time['ecg'])
+latest_time = max(start_time['hr'], start_time['eda'], start_time['ibi'], start_time['breathing'], start_time['ecg'], start_time['bvp'])
 zephyr_time = max(start_time['breathing'], start_time['ecg'])
 
 ######################## drop the data before latest time ############################
@@ -307,6 +316,7 @@ time_diff['eda'] = latest_time - start_time['eda']
 time_diff['ibi'] = latest_time - start_time['ibi']
 time_diff['breathing'] = latest_time - start_time['breathing']
 time_diff['ecg'] = latest_time - start_time['ecg']
+time_diff['bvp'] = latest_time - start_time['bvp']
 
 # get the number of rows that should be deleted
 del_num = {}
@@ -315,6 +325,7 @@ del_num['eda'] = time_diff['eda'] * hz['eda']
 del_num['ibi'] = time_diff['ibi'] * hz['ibi']
 del_num['breathing'] = time_diff['breathing'] * hz['breathing']
 del_num['ecg'] = time_diff['ecg'] * hz['ecg']
+del_num['bvp'] = time_diff['bvp'] * hz['bvp']
 
 # delete rows as much as the difference (also row for Hz)
 hr_df.drop([i for i in range(int(del_num['hr']) + 1)], inplace=True)
@@ -322,9 +333,10 @@ eda_df.drop([i for i in range(int(del_num['eda']) + 1)], inplace=True)
 ibi_df.drop([i for i in range(int(del_num['ibi']) + 1)], inplace=True)
 breathing_df.drop([i for i in range(int(del_num['breathing']))], inplace=True)
 ecg_df.drop([i for i in range(int(del_num['ecg']))], inplace=True)
+bvp_df.drop([i for i in range(int(del_num['bvp']))], inplace=True)
 
 # get the fastest end time in sec
-min_recorded_time_in_sec = min(len(hr_df)/hz['hr'], len(eda_df)/hz['eda'], len(ibi_df)/hz['ibi'], len(breathing_df)/hz['breathing'], len(ecg_df)/hz['ecg'])
+min_recorded_time_in_sec = min(len(hr_df)/hz['hr'], len(eda_df)/hz['eda'], len(ibi_df)/hz['ibi'], len(breathing_df)/hz['breathing'], len(ecg_df)/hz['ecg'], len(bvp_df)/hz['bvp'])
 fastest_end_time = int(latest_time) + math.trunc(min_recorded_time_in_sec)
 
 
