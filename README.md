@@ -1,4 +1,6 @@
-TMS_data_preprocess
+#TMS_data_preprocess
+웨어러블 기기(zepher, E4 empatica)에서 얻는 생체신호를 기반으로 스트레스의 유무를 확인하고자 함
+
 
 #[Label Format]
 - 분노: A
